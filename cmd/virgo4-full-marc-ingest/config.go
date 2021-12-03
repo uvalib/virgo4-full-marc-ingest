@@ -8,7 +8,7 @@ import (
 
 // ServiceConfig defines all of the service configuration parameters
 type ServiceConfig struct {
-	InQueueName    string // SQS queue name for inbound documents
+	InQueueName    string // SQS queue name for inbound notifications
 	OutQueueName   string // SQS queue name for outbound documents
 	CacheQueueName string // SQS queue name for cache documents (typically records go to the cache)
 	PollTimeOut    int64  // the SQS queue timeout (in seconds)
@@ -68,15 +68,15 @@ func LoadConfiguration() *ServiceConfig {
 
 	var cfg ServiceConfig
 
-	cfg.InQueueName = ensureSetAndNonEmpty("VIRGO4_MARC_INGEST_IN_QUEUE")
-	cfg.OutQueueName = ensureSetAndNonEmpty("VIRGO4_MARC_INGEST_OUT_QUEUE")
-	cfg.CacheQueueName = envWithDefault("VIRGO4_MARC_INGEST_CACHE_QUEUE", "")
-	cfg.PollTimeOut = int64(envToInt("VIRGO4_MARC_INGEST_QUEUE_POLL_TIMEOUT"))
-	cfg.DataSource = envWithDefault("VIRGO4_MARC_INGEST_DATA_SOURCE", "")
+	cfg.InQueueName = ensureSetAndNonEmpty("VIRGO4_FULL_MARC_INGEST_IN_QUEUE")
+	cfg.OutQueueName = ensureSetAndNonEmpty("VIRGO4_FULL_MARC_INGEST_OUT_QUEUE")
+	cfg.CacheQueueName = envWithDefault("VIRGO4_FULL_MARC_INGEST_CACHE_QUEUE", "")
+	cfg.PollTimeOut = int64(envToInt("VIRGO4_FULL_MARC_INGEST_QUEUE_POLL_TIMEOUT"))
+	cfg.DataSource = envWithDefault("VIRGO4_FULL_MARC_INGEST_DATA_SOURCE", "")
 	cfg.MessageBucketName = ensureSetAndNonEmpty("VIRGO4_SQS_MESSAGE_BUCKET")
-	cfg.DownloadDir = ensureSetAndNonEmpty("VIRGO4_MARC_INGEST_DOWNLOAD_DIR")
-	cfg.WorkerQueueSize = envToInt("VIRGO4_MARC_INGEST_WORK_QUEUE_SIZE")
-	cfg.Workers = envToInt("VIRGO4_MARC_INGEST_WORKERS")
+	cfg.DownloadDir = ensureSetAndNonEmpty("VIRGO4_FULL_MARC_INGEST_DOWNLOAD_DIR")
+	cfg.WorkerQueueSize = envToInt("VIRGO4_FULL_MARC_INGEST_WORK_QUEUE_SIZE")
+	cfg.Workers = envToInt("VIRGO4_FULL_MARC_INGEST_WORKERS")
 
 	log.Printf("[CONFIG] InQueueName          = [%s]", cfg.InQueueName)
 	log.Printf("[CONFIG] OutQueueName         = [%s]", cfg.OutQueueName)
@@ -98,3 +98,7 @@ func LoadConfiguration() *ServiceConfig {
 
 	return &cfg
 }
+
+//
+// end of file
+//
