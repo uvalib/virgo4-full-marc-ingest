@@ -9,7 +9,42 @@ import (
 	"log"
 )
 
-func ensureServicesExist(services []string) error {
+var ecsService *ecs.ECS
+var aasService *applicationautoscaling.ApplicationAutoScaling
+
+// set up our ECS management objects
+func init() {
+
+	sess, err := session.NewSession()
+	if err == nil {
+		ecsService = ecs.New(sess)
+		aasService = applicationautoscaling.New(sess)
+	}
+}
+
+func ensureServicesExist(clusterName string, services []string) error {
+	return nil
+}
+
+func stopManagedServices(clusterName string, managedServices []string) error {
+	for _, s := range managedServices {
+		err := serviceStop(clusterName, s)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func startManagedServices(clusterName string, managedServices []string) error {
+	for _, s := range managedServices {
+		err := serviceStart(clusterName, s)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -17,9 +52,7 @@ func ensureServicesExist(services []string) error {
 
 func serviceStop(clusterName string, serviceName string) error {
 
-	sess := session.New()
-	ecs_service := ecs.New(sess)
-	aas_service := applicationautoscaling.New(sess)
+	log.Printf("INFO: stopping %s/%s", clusterName, serviceName)
 
 	// suspend the autoscale rule application
 	suspend := true
@@ -29,7 +62,7 @@ func serviceStop(clusterName string, serviceName string) error {
 		ScheduledScalingSuspended:  &suspend,
 	}
 
-	aas_params := &applicationautoscaling.RegisterScalableTargetInput{
+	aasParams := &applicationautoscaling.RegisterScalableTargetInput{
 		ResourceId:        aws.String(fmt.Sprintf("service/%s/%s", clusterName, serviceName)),
 		ScalableDimension: aws.String("ecs:service:DesiredCount"),
 		ServiceNamespace:  aws.String("ecs"),
@@ -37,20 +70,20 @@ func serviceStop(clusterName string, serviceName string) error {
 	}
 
 	// update autoscale rules
-	_, err := aas_service.RegisterScalableTarget(aas_params)
+	_, err := aasService.RegisterScalableTarget(aasParams)
 	if err != nil {
-		log.Println("Autoscale adjust failed, probably no autoscale rules")
+		log.Printf("WARNING: autoscale adjust failed, probably no autoscale rules")
 	}
 
 	// desired count to 0
-	ecs_params := &ecs.UpdateServiceInput{
+	ecsParams := &ecs.UpdateServiceInput{
 		DesiredCount: aws.Int64(0),
 		Service:      aws.String(serviceName),
 		Cluster:      aws.String(clusterName),
 	}
 
 	// update the service attributes
-	_, err = ecs_service.UpdateService(ecs_params)
+	_, err = ecsService.UpdateService(ecsParams)
 	if err != nil {
 		return err
 	}
@@ -60,9 +93,7 @@ func serviceStop(clusterName string, serviceName string) error {
 
 func serviceStart(clusterName string, serviceName string) error {
 
-	sess := session.New()
-	ecs_service := ecs.New(sess)
-	aas_service := applicationautoscaling.New(sess)
+	log.Printf("INFO: starting %s/%s", clusterName, serviceName)
 
 	// un-suspend the autoscale rule application
 	suspend := false
@@ -72,7 +103,7 @@ func serviceStart(clusterName string, serviceName string) error {
 		ScheduledScalingSuspended:  &suspend,
 	}
 
-	aas_params := &applicationautoscaling.RegisterScalableTargetInput{
+	aasParams := &applicationautoscaling.RegisterScalableTargetInput{
 		ResourceId:        aws.String(fmt.Sprintf("service/%s/%s", clusterName, serviceName)),
 		ScalableDimension: aws.String("ecs:service:DesiredCount"),
 		ServiceNamespace:  aws.String("ecs"),
@@ -80,20 +111,20 @@ func serviceStart(clusterName string, serviceName string) error {
 	}
 
 	// update autoscale rules
-	_, err := aas_service.RegisterScalableTarget(aas_params)
+	_, err := aasService.RegisterScalableTarget(aasParams)
 	if err != nil {
-		log.Println("Autoscale adjust failed, probably no autoscale rules")
+		log.Printf("WARNING: autoscale adjust failed, probably no autoscale rules")
 	}
 
 	// desired count to 1
-	ecs_params := &ecs.UpdateServiceInput{
+	ecsParams := &ecs.UpdateServiceInput{
 		DesiredCount: aws.Int64(1),
 		Service:      aws.String(serviceName),
 		Cluster:      aws.String(clusterName),
 	}
 
 	// update the service attributes
-	_, err = ecs_service.UpdateService(ecs_params)
+	_, err = ecsService.UpdateService(ecsParams)
 	if err != nil {
 		return err
 	}

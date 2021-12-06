@@ -1,7 +1,83 @@
 package main
 
-func ensureQueuesExist( queues []string ) error {
+import (
+	"fmt"
+	"github.com/uvalib/virgo4-sqs-sdk/awssqs"
+	"log"
+	"time"
+)
+
+var ErrQueuesNotIdle = fmt.Errorf("queues did not become idle before timeout")
+
+func ensureQueuesExist(aws awssqs.AWS_SQS, queues []string) error {
+
+	for _, q := range queues {
+		_, err := aws.QueueHandle(q)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
+}
+
+func ensureQueuesIdle(aws awssqs.AWS_SQS, queues []string, polltime int, timeout int) error {
+
+	start := time.Now()
+	for {
+		// get counts for all the queues we are interested in
+		counts, err := getQueueMessageCounts(aws, queues)
+		if err != nil {
+			return err
+		}
+
+		// all queues are idle, we can return
+		if allQueuesIdle(counts) == true {
+			log.Printf("INFO: all queues are now idle")
+			return nil
+		}
+
+		// determine if it is time to give up
+		elapsed := int64(time.Since(start) / time.Second)
+		if elapsed >= int64(timeout) {
+			log.Printf("ERROR: queues not idle after %d seconds, giving up", timeout)
+			return ErrQueuesNotIdle
+		}
+
+		// not time to give up, just wait for a while
+		log.Printf("INFO: queues not yet idle...")
+		time.Sleep(time.Duration(polltime) * time.Second)
+	}
+}
+
+func getQueueMessageCounts(aws awssqs.AWS_SQS, queues []string) ([]uint, error) {
+
+	counts := make([]uint, len(queues))
+	for ix, q := range queues {
+		count, err := getQueueMessageCount(aws, q)
+		if err != nil {
+			return counts, err
+		}
+		counts[ix] = count
+	}
+	return counts, nil
+}
+
+func getQueueMessageCount(aws awssqs.AWS_SQS, queue string) (uint, error) {
+
+	count, err := aws.GetMessagesAvailable(queue)
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
+func allQueuesIdle(counts []uint) bool {
+	for _, c := range counts {
+		if c != 0 {
+			return false
+		}
+	}
+	return true
 }
 
 //

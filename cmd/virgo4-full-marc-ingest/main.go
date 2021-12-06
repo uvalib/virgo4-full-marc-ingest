@@ -19,9 +19,16 @@ func main() {
 	// Get config params and use them to init service context. Any issues are fatal
 	cfg := LoadConfiguration()
 
+	// establish the database connection
+	err := newDBConnection(cfg)
+	fatalIfError(err)
+
 	// load our AWS_SQS helper object
 	aws, err := awssqs.NewAwsSqs(awssqs.AwsSqsConfig{MessageBucketName: cfg.MessageBucketName})
 	fatalIfError(err)
+
+	// ensure the queues exist
+	fatalIfError(ensureQueuesExist(aws, cfg.WaitIdleQueues))
 
 	// get the queue handles from the queue name
 	inQueueHandle, err := aws.QueueHandle(cfg.InQueueName)

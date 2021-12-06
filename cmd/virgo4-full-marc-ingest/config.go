@@ -25,9 +25,16 @@ type ServiceConfig struct {
 	WaitForIdleStart int      // the time to wait for idle at the start of processing
 	WaitForIdleEnd   int      // the time to wait for idle at the end of processing
 
+	ECSClusterName     string   // the cluster name containing the managed services
 	ManagedECSServices []string // list of services to manage during processing (stop at the beginning and restart at the end)
 
 	SOLRReplicas []string // list of SOLR replicas we need to manage
+
+	PostgresHost     string // database endpoint name
+	PostgresPort     int    // database port
+	PostgresUser     string // database user
+	PostgresPass     string // database password
+	PostgresDatabase string // database name
 }
 
 func envWithDefault(env string, defaultValue string) string {
@@ -94,8 +101,15 @@ func LoadConfiguration() *ServiceConfig {
 	cfg.WaitIdleQueues = splitMultiple(ensureSetAndNonEmpty("VIRGO4_FULL_MARC_INGEST_IDLE_QUEUES"))
 	cfg.WaitForIdleStart = envToInt("VIRGO4_FULL_MARC_INGEST_START_IDLE_WAIT")
 	cfg.WaitForIdleEnd = envToInt("VIRGO4_FULL_MARC_INGEST_END_IDLE_WAIT")
+	cfg.ECSClusterName = ensureSetAndNonEmpty("VIRGO4_FULL_MARC_INGEST_CLUSTER_NAME")
 	cfg.ManagedECSServices = splitMultiple(ensureSetAndNonEmpty("VIRGO4_FULL_MARC_INGEST_MANAGED_SERVICES"))
 	cfg.SOLRReplicas = splitMultiple(ensureSetAndNonEmpty("VIRGO4_FULL_MARC_INGEST_SOLR_REPLICAS"))
+
+	cfg.PostgresHost = ensureSetAndNonEmpty("VIRGO4_FULL_MARC_INGEST_POSTGRES_HOST")
+	cfg.PostgresPort = envToInt("VIRGO4_FULL_MARC_INGEST_POSTGRES_PORT")
+	cfg.PostgresUser = ensureSetAndNonEmpty("VIRGO4_FULL_MARC_INGEST_POSTGRES_USER")
+	cfg.PostgresPass = ensureSetAndNonEmpty("VIRGO4_FULL_MARC_INGEST_POSTGRES_PASS")
+	cfg.PostgresDatabase = ensureSetAndNonEmpty("VIRGO4_FULL_MARC_INGEST_POSTGRES_DATABASE")
 
 	log.Printf("[CONFIG] InQueueName          = [%s]", cfg.InQueueName)
 	log.Printf("[CONFIG] OutQueueName         = [%s]", cfg.OutQueueName)
@@ -110,12 +124,18 @@ func LoadConfiguration() *ServiceConfig {
 	log.Printf("[CONFIG] WaitIdleQueues       = [%s]", ensureSetAndNonEmpty("VIRGO4_FULL_MARC_INGEST_IDLE_QUEUES"))
 	log.Printf("[CONFIG] WaitForIdleStart     = [%d]", cfg.WaitForIdleStart)
 	log.Printf("[CONFIG] WaitForIdleEnd       = [%d]", cfg.WaitForIdleEnd)
+	log.Printf("[CONFIG] ECSClusterName       = [%s]", cfg.ECSClusterName)
 	log.Printf("[CONFIG] ManagedECSServices   = [%s]", ensureSetAndNonEmpty("VIRGO4_FULL_MARC_INGEST_MANAGED_SERVICES"))
 	log.Printf("[CONFIG] SOLRReplicas         = [%s]", ensureSetAndNonEmpty("VIRGO4_FULL_MARC_INGEST_SOLR_REPLICAS"))
 
-	// ensure the configured queues, services and SOLR endpoints exist
-	fatalIfError(ensureQueuesExist(cfg.WaitIdleQueues))
-	fatalIfError(ensureServicesExist(cfg.ManagedECSServices))
+	log.Printf("[CONFIG] PostgresHost         = [%s]", cfg.PostgresHost)
+	log.Printf("[CONFIG] PostgresPort         = [%d]", cfg.PostgresPort)
+	log.Printf("[CONFIG] PostgresUser         = [%s]", cfg.PostgresUser)
+	log.Printf("[CONFIG] PostgresPass         = [REDACTED]")
+	log.Printf("[CONFIG] PostgresDatabase     = [%s]", cfg.PostgresDatabase)
+
+	// ensure the services and SOLR endpoints exist
+	fatalIfError(ensureServicesExist(cfg.ECSClusterName, cfg.ManagedECSServices))
 	fatalIfError(ensureSOLREndpointsExist(cfg.SOLRReplicas))
 
 	if cfg.CacheQueueName == "" {
