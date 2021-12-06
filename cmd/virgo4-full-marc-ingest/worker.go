@@ -75,9 +75,6 @@ func worker(id int, config ServiceConfig, aws awssqs.AWS_SQS, outQueue awssqs.Qu
 
 func sendOutboundMessages(config ServiceConfig, aws awssqs.AWS_SQS, outQueue awssqs.QueueHandle, cacheQueue awssqs.QueueHandle, records []Record) error {
 
-	// TEMP
-	return nil
-
 	count := len(records)
 	if count == 0 {
 		return nil

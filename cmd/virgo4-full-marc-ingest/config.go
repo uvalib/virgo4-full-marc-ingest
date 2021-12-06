@@ -22,13 +22,16 @@ type ServiceConfig struct {
 	Workers         int // the number of worker processes
 
 	WaitIdleQueues   []string // list of queues we need to wait on to determine we are idle
+	ErrorQueue       string   // queue to determine if there were errors during processing
+	ErrorThreshold   int      // the number of errors before we abandon the processing sequence
 	WaitForIdleStart int      // the time to wait for idle at the start of processing
 	WaitForIdleEnd   int      // the time to wait for idle at the end of processing
 
 	ECSClusterName     string   // the cluster name containing the managed services
 	ManagedECSServices []string // list of services to manage during processing (stop at the beginning and restart at the end)
 
-	SOLRReplicas []string // list of SOLR replicas we need to manage
+	SOLRMaster string // SOLR master endpoint
+	//SOLRReplicas []string // list of SOLR replicas we need to manage
 
 	PostgresHost     string // database endpoint name
 	PostgresPort     int    // database port
@@ -101,9 +104,11 @@ func LoadConfiguration() *ServiceConfig {
 	cfg.WaitIdleQueues = splitMultiple(ensureSetAndNonEmpty("VIRGO4_FULL_MARC_INGEST_IDLE_QUEUES"))
 	cfg.WaitForIdleStart = envToInt("VIRGO4_FULL_MARC_INGEST_START_IDLE_WAIT")
 	cfg.WaitForIdleEnd = envToInt("VIRGO4_FULL_MARC_INGEST_END_IDLE_WAIT")
+	cfg.ErrorQueue = ensureSetAndNonEmpty("VIRGO4_FULL_MARC_INGEST_ERROR_QUEUE")
+	cfg.ErrorThreshold = envToInt("VIRGO4_FULL_MARC_INGEST_ERROR_THRESHOLD")
 	cfg.ECSClusterName = ensureSetAndNonEmpty("VIRGO4_FULL_MARC_INGEST_CLUSTER_NAME")
 	cfg.ManagedECSServices = splitMultiple(ensureSetAndNonEmpty("VIRGO4_FULL_MARC_INGEST_MANAGED_SERVICES"))
-	cfg.SOLRReplicas = splitMultiple(ensureSetAndNonEmpty("VIRGO4_FULL_MARC_INGEST_SOLR_REPLICAS"))
+	cfg.SOLRMaster = ensureSetAndNonEmpty("VIRGO4_FULL_MARC_INGEST_SOLR_MASTER")
 
 	cfg.PostgresHost = ensureSetAndNonEmpty("VIRGO4_FULL_MARC_INGEST_POSTGRES_HOST")
 	cfg.PostgresPort = envToInt("VIRGO4_FULL_MARC_INGEST_POSTGRES_PORT")
@@ -124,9 +129,11 @@ func LoadConfiguration() *ServiceConfig {
 	log.Printf("[CONFIG] WaitIdleQueues       = [%s]", ensureSetAndNonEmpty("VIRGO4_FULL_MARC_INGEST_IDLE_QUEUES"))
 	log.Printf("[CONFIG] WaitForIdleStart     = [%d]", cfg.WaitForIdleStart)
 	log.Printf("[CONFIG] WaitForIdleEnd       = [%d]", cfg.WaitForIdleEnd)
+	log.Printf("[CONFIG] ErrorQueue           = [%s]", cfg.ErrorQueue)
+	log.Printf("[CONFIG] ErrorThreshold       = [%d]", cfg.ErrorThreshold)
 	log.Printf("[CONFIG] ECSClusterName       = [%s]", cfg.ECSClusterName)
 	log.Printf("[CONFIG] ManagedECSServices   = [%s]", ensureSetAndNonEmpty("VIRGO4_FULL_MARC_INGEST_MANAGED_SERVICES"))
-	log.Printf("[CONFIG] SOLRReplicas         = [%s]", ensureSetAndNonEmpty("VIRGO4_FULL_MARC_INGEST_SOLR_REPLICAS"))
+	log.Printf("[CONFIG] SOLRMaster           = [%s]", cfg.SOLRMaster)
 
 	log.Printf("[CONFIG] PostgresHost         = [%s]", cfg.PostgresHost)
 	log.Printf("[CONFIG] PostgresPort         = [%d]", cfg.PostgresPort)
@@ -136,7 +143,7 @@ func LoadConfiguration() *ServiceConfig {
 
 	// ensure the services and SOLR endpoints exist
 	fatalIfError(ensureServicesExist(cfg.ECSClusterName, cfg.ManagedECSServices))
-	fatalIfError(ensureSOLREndpointsExist(cfg.SOLRReplicas))
+	fatalIfError(ensureSOLREndpointExists(cfg.SOLRMaster))
 
 	if cfg.CacheQueueName == "" {
 		log.Printf("INFO: cache queue name is blank, record caching is DISABLED!!")

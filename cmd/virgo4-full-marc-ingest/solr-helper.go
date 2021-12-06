@@ -1,38 +1,17 @@
 package main
 
-import "log"
+import (
+	"log"
+	"time"
+)
 
-func ensureSOLREndpointsExist(endpoints []string) error {
+func ensureSOLREndpointExists(endpoint string) error {
+	log.Printf("INFO: checking SOLR endpoint %s", endpoint)
 	return nil
 }
 
-func stopSOLRReplication(endpoints []string) error {
-	for _, e := range endpoints {
-		err := disableSolrReplication(e)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func startSOLRReplication(endpoints []string) error {
-	for _, e := range endpoints {
-		err := enableSolrReplication(e)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func disableSolrReplication(endpoint string) error {
-	log.Printf("INFO: disabling replication for %s", endpoint)
-	return nil
-}
-
-func enableSolrReplication(endpoint string) error {
-	log.Printf("INFO: enabling replication for %s", endpoint)
+func deleteOldSolrRecords(endpoint string, dataSource string, olderThan time.Time) error {
+	log.Printf("INFO: deleting SOLR records (%s) older than %s", dataSource, olderThan)
 	return nil
 }
 

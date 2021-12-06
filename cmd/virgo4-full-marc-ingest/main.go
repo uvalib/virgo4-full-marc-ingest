@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -8,6 +9,8 @@ import (
 
 	"github.com/uvalib/virgo4-sqs-sdk/awssqs"
 )
+
+var ErrTooManyUnprocessedItems = fmt.Errorf("too many unprocessed items")
 
 //
 // main entry point
@@ -28,7 +31,7 @@ func main() {
 	fatalIfError(err)
 
 	// ensure the queues exist
-	fatalIfError(ensureQueuesExist(aws, cfg.WaitIdleQueues))
+	fatalIfError(ensureQueuesExist(aws, append(cfg.WaitIdleQueues, cfg.ErrorQueue)))
 
 	// get the queue handles from the queue name
 	inQueueHandle, err := aws.QueueHandle(cfg.InQueueName)
@@ -131,9 +134,9 @@ func main() {
 		err = ensureQueuesIdle(aws, cfg.WaitIdleQueues, int(cfg.PollTimeOut), cfg.WaitForIdleStart)
 		fatalIfError(err)
 
-		// stop the SOLR replication
-		err = stopSOLRReplication(cfg.SOLRReplicas)
-		fatalIfError(err)
+		// once processing is complete, we will delete old records so we need to capture the time we start
+		//startIngest := time.Now()
+		startIngest := time.Date(2018, 0, 1, 0, 0, 0, 0, time.UTC)
 
 		// now we can process each of the inbound files
 		for ix, f := range inbound {
@@ -199,30 +202,40 @@ func main() {
 
 		// wait until we have processed all outbound items
 		for {
-			time.Sleep(flushTimeout)
+			pending := len(marcRecordsChan)
 			// is our queue empty
-			if len(marcRecordsChan) == 0 {
+			if pending == 0 {
 				// wait until the workers have flushed their queues
 				time.Sleep(flushTimeout)
 				break
+			} else {
+				log.Printf("INFO: waiting for all records to be queued (%d remain)", pending)
+				time.Sleep(flushTimeout)
 			}
 		}
 
 		// wait until the work queues are idle
+		time.Sleep(30 * time.Second)
 		err = ensureQueuesIdle(aws, cfg.WaitIdleQueues, int(cfg.PollTimeOut), cfg.WaitForIdleEnd)
 		fatalIfError(err)
 
-		// delete older SOLR stuff
-
-		// delete older cache stuff
-
-		// determine of we have unprocessed items and abort as necessary
-
-		// start the SOLR replication
-		err = startSOLRReplication(cfg.SOLRReplicas)
+		// delete old SOLR stuff
+		err = deleteOldSolrRecords(cfg.DataSource, cfg.SOLRMaster, startIngest)
 		fatalIfError(err)
 
-		// enable the ingest services
+		// delete old cache stuff
+		err = deleteOldCacheRecords(cfg.DataSource, startIngest)
+		fatalIfError(err)
+
+		// determine of we have unprocessed items and abort if we have too many
+		unprocessed, err := getQueueMessageCount(aws, cfg.ErrorQueue)
+		fatalIfError(err)
+		if unprocessed >= uint(cfg.ErrorThreshold) {
+			log.Printf("ERROR: too many unprocessed items (%d)", unprocessed)
+			fatalIfError(ErrTooManyUnprocessedItems)
+		}
+
+		// re-enable the ingest services
 		err = startManagedServices(cfg.ECSClusterName, cfg.ManagedECSServices)
 		fatalIfError(err)
 	}

@@ -68,6 +68,9 @@ func getQueueMessageCount(aws awssqs.AWS_SQS, queue string) (uint, error) {
 	if err != nil {
 		return 0, err
 	}
+	if count > 0 {
+		log.Printf("INFO: queue %s still contains %d items", queue, count)
+	}
 	return count, nil
 }
 
