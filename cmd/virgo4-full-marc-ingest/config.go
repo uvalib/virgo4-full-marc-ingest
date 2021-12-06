@@ -30,8 +30,9 @@ type ServiceConfig struct {
 	ECSClusterName     string   // the cluster name containing the managed services
 	ManagedECSServices []string // list of services to manage during processing (stop at the beginning and restart at the end)
 
-	SOLRMaster string // SOLR master endpoint
-	//SOLRReplicas []string // list of SOLR replicas we need to manage
+	SolrMaster  string // SOLR master endpoint
+	SolrCore    string // SOLR core name
+	SolrTimeout int    // SOLR communication timeout
 
 	PostgresHost     string // database endpoint name
 	PostgresPort     int    // database port
@@ -108,7 +109,9 @@ func LoadConfiguration() *ServiceConfig {
 	cfg.ErrorThreshold = envToInt("VIRGO4_FULL_MARC_INGEST_ERROR_THRESHOLD")
 	cfg.ECSClusterName = ensureSetAndNonEmpty("VIRGO4_FULL_MARC_INGEST_CLUSTER_NAME")
 	cfg.ManagedECSServices = splitMultiple(ensureSetAndNonEmpty("VIRGO4_FULL_MARC_INGEST_MANAGED_SERVICES"))
-	cfg.SOLRMaster = ensureSetAndNonEmpty("VIRGO4_FULL_MARC_INGEST_SOLR_MASTER")
+	cfg.SolrMaster = ensureSetAndNonEmpty("VIRGO4_FULL_MARC_INGEST_SOLR_MASTER")
+	cfg.SolrCore = ensureSetAndNonEmpty("VIRGO4_FULL_MARC_INGEST_SOLR_CORE")
+	cfg.SolrTimeout = envToInt("VIRGO4_FULL_MARC_INGEST_SOLR_TIMEOUT")
 
 	cfg.PostgresHost = ensureSetAndNonEmpty("VIRGO4_FULL_MARC_INGEST_POSTGRES_HOST")
 	cfg.PostgresPort = envToInt("VIRGO4_FULL_MARC_INGEST_POSTGRES_PORT")
@@ -133,7 +136,9 @@ func LoadConfiguration() *ServiceConfig {
 	log.Printf("[CONFIG] ErrorThreshold       = [%d]", cfg.ErrorThreshold)
 	log.Printf("[CONFIG] ECSClusterName       = [%s]", cfg.ECSClusterName)
 	log.Printf("[CONFIG] ManagedECSServices   = [%s]", ensureSetAndNonEmpty("VIRGO4_FULL_MARC_INGEST_MANAGED_SERVICES"))
-	log.Printf("[CONFIG] SOLRMaster           = [%s]", cfg.SOLRMaster)
+	log.Printf("[CONFIG] SolrMaster           = [%s]", cfg.SolrMaster)
+	log.Printf("[CONFIG] SolrCore             = [%s]", cfg.SolrCore)
+	log.Printf("[CONFIG] SolrTimeout          = [%d]", cfg.SolrTimeout)
 
 	log.Printf("[CONFIG] PostgresHost         = [%s]", cfg.PostgresHost)
 	log.Printf("[CONFIG] PostgresPort         = [%d]", cfg.PostgresPort)
@@ -143,7 +148,7 @@ func LoadConfiguration() *ServiceConfig {
 
 	// ensure the services and SOLR endpoints exist
 	fatalIfError(ensureServicesExist(cfg.ECSClusterName, cfg.ManagedECSServices))
-	fatalIfError(ensureSOLREndpointExists(cfg.SOLRMaster))
+	fatalIfError(ensureSOLREndpointExists(cfg.SolrMaster, cfg.SolrCore, cfg.SolrTimeout))
 
 	if cfg.CacheQueueName == "" {
 		log.Printf("INFO: cache queue name is blank, record caching is DISABLED!!")

@@ -219,12 +219,12 @@ func main() {
 		fatalIfError(err)
 
 		// delete old SOLR stuff
-		err = deleteOldSolrRecords(cfg.DataSource, cfg.SOLRMaster, startIngest)
+		err = deleteOldSolrRecords(cfg.SolrMaster, cfg.SolrCore, cfg.SolrTimeout, cfg.DataSource, startIngest)
 		fatalIfError(err)
 
 		// delete old cache stuff
-		err = deleteOldCacheRecords(cfg.DataSource, startIngest)
-		fatalIfError(err)
+		//err = deleteOldCacheRecords(cfg.DataSource, startIngest)
+		//fatalIfError(err)
 
 		// determine of we have unprocessed items and abort if we have too many
 		unprocessed, err := getQueueMessageCount(aws, cfg.ErrorQueue)
