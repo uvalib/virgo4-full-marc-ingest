@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 )
 
 // ServiceConfig defines all of the service configuration parameters
@@ -19,6 +20,14 @@ type ServiceConfig struct {
 
 	WorkerQueueSize int // the inbound message queue size to feed the workers
 	Workers         int // the number of worker processes
+
+	WaitIdleQueues   []string // list of queues we need to wait on to determine we are idle
+	WaitForIdleStart int      // the time to wait for idle at the start of processing
+	WaitForIdleEnd   int      // the time to wait for idle at the end of processing
+
+	ManagedECSServices []string // list of services to manage during processing (stop at the beginning and restart at the end)
+
+	SOLRReplicas []string // list of SOLR replicas we need to manage
 }
 
 func envWithDefault(env string, defaultValue string) string {
@@ -62,6 +71,10 @@ func envToInt(env string) int {
 	return n
 }
 
+func splitMultiple(env string) []string {
+	return strings.Split(env, " ")
+}
+
 // LoadConfiguration will load the service configuration from env/cmdline
 // and return a pointer to it. Any failures are fatal.
 func LoadConfiguration() *ServiceConfig {
@@ -78,6 +91,12 @@ func LoadConfiguration() *ServiceConfig {
 	cfg.WorkerQueueSize = envToInt("VIRGO4_FULL_MARC_INGEST_WORK_QUEUE_SIZE")
 	cfg.Workers = envToInt("VIRGO4_FULL_MARC_INGEST_WORKERS")
 
+	cfg.WaitIdleQueues = splitMultiple(ensureSetAndNonEmpty("VIRGO4_FULL_MARC_INGEST_IDLE_QUEUES"))
+	cfg.WaitForIdleStart = envToInt("VIRGO4_FULL_MARC_INGEST_START_IDLE_WAIT")
+	cfg.WaitForIdleEnd = envToInt("VIRGO4_FULL_MARC_INGEST_END_IDLE_WAIT")
+	cfg.ManagedECSServices = splitMultiple(ensureSetAndNonEmpty("VIRGO4_FULL_MARC_INGEST_MANAGED_SERVICES"))
+	cfg.SOLRReplicas = splitMultiple(ensureSetAndNonEmpty("VIRGO4_FULL_MARC_INGEST_SOLR_REPLICAS"))
+
 	log.Printf("[CONFIG] InQueueName          = [%s]", cfg.InQueueName)
 	log.Printf("[CONFIG] OutQueueName         = [%s]", cfg.OutQueueName)
 	log.Printf("[CONFIG] CacheQueueName       = [%s]", cfg.CacheQueueName)
@@ -87,6 +106,17 @@ func LoadConfiguration() *ServiceConfig {
 	log.Printf("[CONFIG] DownloadDir          = [%s]", cfg.DownloadDir)
 	log.Printf("[CONFIG] WorkerQueueSize      = [%d]", cfg.WorkerQueueSize)
 	log.Printf("[CONFIG] Workers              = [%d]", cfg.Workers)
+
+	log.Printf("[CONFIG] WaitIdleQueues       = [%s]", ensureSetAndNonEmpty("VIRGO4_FULL_MARC_INGEST_IDLE_QUEUES"))
+	log.Printf("[CONFIG] WaitForIdleStart     = [%d]", cfg.WaitForIdleStart)
+	log.Printf("[CONFIG] WaitForIdleEnd       = [%d]", cfg.WaitForIdleEnd)
+	log.Printf("[CONFIG] ManagedECSServices   = [%s]", ensureSetAndNonEmpty("VIRGO4_FULL_MARC_INGEST_MANAGED_SERVICES"))
+	log.Printf("[CONFIG] SOLRReplicas         = [%s]", ensureSetAndNonEmpty("VIRGO4_FULL_MARC_INGEST_SOLR_REPLICAS"))
+
+	// ensure the configured queues, services and SOLR endpoints exist
+	fatalIfError(ensureQueuesExist(cfg.WaitIdleQueues))
+	fatalIfError(ensureServicesExist(cfg.ManagedECSServices))
+	fatalIfError(ensureSOLREndpointsExist(cfg.SOLRReplicas))
 
 	if cfg.CacheQueueName == "" {
 		log.Printf("INFO: cache queue name is blank, record caching is DISABLED!!")
