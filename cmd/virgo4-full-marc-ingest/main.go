@@ -215,7 +215,6 @@ func main() {
 		}
 
 		// wait until the work queues are idle
-		time.Sleep(30 * time.Second)
 		err = ensureQueuesIdle(aws, cfg.WaitIdleQueues, int(cfg.PollTimeOut), cfg.WaitForIdleEnd)
 		fatalIfError(err)
 
