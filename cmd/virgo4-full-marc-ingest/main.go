@@ -119,6 +119,22 @@ func main() {
 			}
 		}
 
+		//
+		// the inbound file(s) have been downloaded and validated, we need to do the other pre-processing steps now
+		//
+
+		// disable the ingest services
+		err = stopManagedServices(cfg.ECSClusterName, cfg.ManagedECSServices)
+		fatalIfError(err)
+
+		// wait until the work queues are idle
+		err = ensureQueuesIdle(aws, cfg.WaitIdleQueues, int(cfg.PollTimeOut), cfg.WaitForIdleStart)
+		fatalIfError(err)
+
+		// stop the SOLR replication
+		err = stopSOLRReplication(cfg.SOLRReplicas)
+		fatalIfError(err)
+
 		// now we can process each of the inbound files
 		for ix, f := range inbound {
 
@@ -180,6 +196,35 @@ func main() {
 			err = os.Remove(localNames[ix])
 			fatalIfError(err)
 		}
+
+		// wait until we have processed all outbound items
+		for {
+			time.Sleep(flushTimeout)
+			// is our queue empty
+			if len(marcRecordsChan) == 0 {
+				// wait until the workers have flushed their queues
+				time.Sleep(flushTimeout)
+				break
+			}
+		}
+
+		// wait until the work queues are idle
+		err = ensureQueuesIdle(aws, cfg.WaitIdleQueues, int(cfg.PollTimeOut), cfg.WaitForIdleEnd)
+		fatalIfError(err)
+
+		// delete older SOLR stuff
+
+		// delete older cache stuff
+
+		// determine of we have unprocessed items and abort as necessary
+
+		// start the SOLR replication
+		err = startSOLRReplication(cfg.SOLRReplicas)
+		fatalIfError(err)
+
+		// enable the ingest services
+		err = startManagedServices(cfg.ECSClusterName, cfg.ManagedECSServices)
+		fatalIfError(err)
 	}
 }
 

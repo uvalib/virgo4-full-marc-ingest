@@ -212,7 +212,7 @@ func (l *recordLoaderImpl) Next(readAhead bool) (Record, error) {
 			// and repeat the process
 			impl, ok := rec.(*recordImpl)
 			if ok == true {
-				log.Printf("INFO: identified additional marc record for %s, appending it", id)
+				//log.Printf("INFO: identified additional marc record for %s, appending it", id)
 				impl.RawBytes = append(rec.Raw(), nextRec.Raw()...)
 			} else {
 				log.Printf("ERROR: unable to append MARC additional record")
