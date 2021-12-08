@@ -55,6 +55,7 @@ func getQueueMessageCounts(aws awssqs.AWS_SQS, queues []string) ([]uint, error) 
 	for ix, q := range queues {
 		count, err := getQueueMessageCount(aws, q)
 		if err != nil {
+			log.Printf("ERROR: queues %s does not exist", q)
 			return counts, err
 		}
 		counts[ix] = count

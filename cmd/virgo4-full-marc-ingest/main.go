@@ -135,8 +135,8 @@ func main() {
 		fatalIfError(err)
 
 		// once processing is complete, we will delete old records so we need to capture the time we start
-		//startIngest := time.Now()
-		startIngest := time.Date(2018, 0, 1, 0, 0, 0, 0, time.UTC)
+		startIngest := time.Now()
+		//startIngest := time.Date(2018, 0, 1, 0, 0, 0, 0, time.UTC)
 
 		// now we can process each of the inbound files
 		for ix, f := range inbound {
@@ -223,8 +223,8 @@ func main() {
 		fatalIfError(err)
 
 		// delete old cache stuff
-		//err = deleteOldCacheRecords(cfg.DataSource, startIngest)
-		//fatalIfError(err)
+		err = deleteOldCacheRecords(cfg.DataSource, startIngest)
+		fatalIfError(err)
 
 		// determine of we have unprocessed items and abort if we have too many
 		unprocessed, err := getQueueMessageCount(aws, cfg.ErrorQueue)

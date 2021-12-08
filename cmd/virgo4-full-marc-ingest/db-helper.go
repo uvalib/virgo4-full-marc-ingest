@@ -30,7 +30,7 @@ func newDBConnection(cfg *ServiceConfig) error {
 }
 
 func deleteOldCacheRecords(dataSource string, olderThan time.Time) error {
-	log.Printf("INFO: deleting cache records (%s) older than %s", dataSource, olderThan)
+	log.Printf("INFO: deleting cache records (%s) older than %s", dataSource, olderThan.UTC())
 
 	//
 	// note that the updated_at field in the database is stored in UTC so the time does not need to be localized
@@ -39,11 +39,11 @@ func deleteOldCacheRecords(dataSource string, olderThan time.Time) error {
 	q := dbHandle.NewQuery(cacheDeleteQuery)
 	q.Bind(dbx.Params{"source": dataSource})
 	q.Bind(dbx.Params{"before": olderThan})
-	_, err := q.Execute()
-	if err != nil {
-		log.Printf("ERROR: deleting old cache records (%s)", err)
-		return err
-	}
+	//_, err := q.Execute()
+	//if err != nil {
+	//	log.Printf("ERROR: deleting old cache records (%s)", err)
+	//	return err
+	//}
 
 	return nil
 }
