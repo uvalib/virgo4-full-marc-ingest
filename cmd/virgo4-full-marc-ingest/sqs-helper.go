@@ -23,6 +23,7 @@ func ensureQueuesExist(aws awssqs.AWS_SQS, queues []string) error {
 func ensureQueuesIdle(aws awssqs.AWS_SQS, queues []string, polltime int, timeout int) error {
 
 	start := time.Now()
+	idleCount := 0 // we to handle in-flight too so we wait for 3 idle iterations
 	for {
 		// get counts for all the queues we are interested in
 		counts, err := getQueueMessageCounts(aws, queues)
@@ -32,8 +33,13 @@ func ensureQueuesIdle(aws awssqs.AWS_SQS, queues []string, polltime int, timeout
 
 		// all queues are idle, we can return
 		if allQueuesIdle(counts) == true {
-			log.Printf("INFO: all queues are now idle")
-			return nil
+			idleCount++
+			if idleCount == 3 {
+				log.Printf("INFO: all queues are now idle")
+				return nil
+			}
+		} else {
+			idleCount = 0
 		}
 
 		// determine if it is time to give up
