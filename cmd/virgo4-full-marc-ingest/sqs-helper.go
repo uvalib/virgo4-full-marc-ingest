@@ -51,7 +51,7 @@ func ensureQueuesIdle(aws awssqs.AWS_SQS, queues []string, polltime int, timeout
 		}
 
 		// not time to give up, just wait for a while
-		log.Printf("INFO: queues not yet idle...")
+		log.Printf("INFO: waiting for queues to go idle...")
 		time.Sleep(time.Duration(polltime) * time.Second)
 	}
 }

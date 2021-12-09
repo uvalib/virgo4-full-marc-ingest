@@ -72,7 +72,7 @@ func serviceStop(clusterName string, serviceName string) error {
 	// update autoscale rules
 	_, err := aasService.RegisterScalableTarget(aasParams)
 	if err != nil {
-		log.Printf("WARNING: autoscale adjust failed, probably no autoscale rules")
+		log.Printf("WARNING: autoscale adjust failed, probably no autoscale rules (%s)", err.Error())
 	}
 
 	// desired count to 0
@@ -113,7 +113,7 @@ func serviceStart(clusterName string, serviceName string) error {
 	// update autoscale rules
 	_, err := aasService.RegisterScalableTarget(aasParams)
 	if err != nil {
-		log.Printf("WARNING: autoscale adjust failed, probably no autoscale rules")
+		log.Printf("WARNING: autoscale adjust failed, probably no autoscale rules (%s)", err.Error())
 	}
 
 	// desired count to 1
