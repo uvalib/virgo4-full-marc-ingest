@@ -35,9 +35,9 @@ func deleteOldSolrRecords(endpoint string, core string, timeout int, dataSource 
 	older := olderThan.UTC().Format(time.RFC3339)
 
 	// configure the client
-	//httpClient := &http.Client{
-	//	Timeout: time.Duration(timeout) * time.Second,
-	//}
+	httpClient := &http.Client{
+		Timeout: time.Duration(timeout) * time.Second,
+	}
 
 	deleteUrl := fmt.Sprintf("%s/%s/update", endpoint, core)
 	log.Printf("INFO: URL %s", deleteUrl)
@@ -45,8 +45,14 @@ func deleteOldSolrRecords(endpoint string, core string, timeout int, dataSource 
 	deletePayload = strings.ReplaceAll(deletePayload, "{:before}", older)
 	deletePayload = strings.ReplaceAll(deletePayload, "{:datasource}", dataSource)
 	log.Printf("INFO: Payload %s", deletePayload)
-	//_, err := httpPost(httpClient, deleteUrl, []byte(deletePayload))
-	//return err
+	start := time.Now()
+	_, err := httpPost(httpClient, deleteUrl, []byte(deletePayload))
+	if err != nil {
+		log.Printf("ERROR: deleting SOLR records (%s)", err.Error())
+		return err
+	}
+	duration := time.Since(start)
+	log.Printf("INFO: SOLR delete done in %0.2f seconds", duration.Seconds())
 	return nil
 }
 

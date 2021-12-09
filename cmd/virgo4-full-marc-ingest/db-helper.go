@@ -39,11 +39,14 @@ func deleteOldCacheRecords(dataSource string, olderThan time.Time) error {
 	q := dbHandle.NewQuery(cacheDeleteQuery)
 	q.Bind(dbx.Params{"source": dataSource})
 	q.Bind(dbx.Params{"before": olderThan})
-	//_, err := q.Execute()
-	//if err != nil {
-	//	log.Printf("ERROR: deleting old cache records (%s)", err)
-	//	return err
-	//}
+	start := time.Now()
+	_, err := q.Execute()
+	if err != nil {
+		log.Printf("ERROR: deleting old cache records (%s)", err.Error())
+		return err
+	}
+	duration := time.Since(start)
+	log.Printf("INFO: cache delete done in %0.2f seconds", duration.Seconds())
 
 	return nil
 }

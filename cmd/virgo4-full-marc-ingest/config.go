@@ -39,6 +39,9 @@ type ServiceConfig struct {
 	PostgresUser     string // database user
 	PostgresPass     string // database password
 	PostgresDatabase string // database name
+
+	DeleteCache bool // do we delete the cache after processing
+	DeleteSolr  bool // do we delete the cache after processing
 }
 
 func envWithDefault(env string, defaultValue string) string {
@@ -82,6 +85,14 @@ func envToInt(env string) int {
 	return n
 }
 
+func envToBool(env string, defValue string) bool {
+
+	boolean := envWithDefault(env, defValue)
+	b, err := strconv.ParseBool(boolean)
+	fatalIfError(err)
+	return b
+}
+
 func splitMultiple(env string) []string {
 	return strings.Split(env, " ")
 }
@@ -119,6 +130,9 @@ func LoadConfiguration() *ServiceConfig {
 	cfg.PostgresPass = ensureSetAndNonEmpty("VIRGO4_FULL_MARC_INGEST_POSTGRES_PASS")
 	cfg.PostgresDatabase = ensureSetAndNonEmpty("VIRGO4_FULL_MARC_INGEST_POSTGRES_DATABASE")
 
+	cfg.DeleteCache = envToBool("VIRGO4_FULL_MARC_INGEST_DELETE_CACHE", "false")
+	cfg.DeleteSolr = envToBool("VIRGO4_FULL_MARC_INGEST_DELETE_SOLR", "false")
+
 	log.Printf("[CONFIG] InQueueName          = [%s]", cfg.InQueueName)
 	log.Printf("[CONFIG] OutQueueName         = [%s]", cfg.OutQueueName)
 	log.Printf("[CONFIG] CacheQueueName       = [%s]", cfg.CacheQueueName)
@@ -145,6 +159,9 @@ func LoadConfiguration() *ServiceConfig {
 	log.Printf("[CONFIG] PostgresUser         = [%s]", cfg.PostgresUser)
 	log.Printf("[CONFIG] PostgresPass         = [REDACTED]")
 	log.Printf("[CONFIG] PostgresDatabase     = [%s]", cfg.PostgresDatabase)
+
+	log.Printf("[CONFIG] DeleteCache          = [%t]", cfg.DeleteCache)
+	log.Printf("[CONFIG] DeleteSolr           = [%t]", cfg.DeleteSolr)
 
 	// ensure the services and SOLR endpoints exist
 	fatalIfError(ensureServicesExist(cfg.ECSClusterName, cfg.ManagedECSServices))
