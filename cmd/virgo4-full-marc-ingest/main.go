@@ -237,13 +237,13 @@ func main() {
 		// delete old SOLR stuff
 		if cfg.DeleteSolr == true {
 			err = deleteOldSolrRecords(cfg.SolrMaster, cfg.SolrCore, cfg.SolrTimeout, cfg.DataSource, startIngest)
-			fatalIfError(err)
+			//fatalIfError(err)
 		}
 
 		// delete old cache stuff
 		if cfg.DeleteCache == true {
 			err = deleteOldCacheRecords(cfg.DataSource, startIngest)
-			fatalIfError(err)
+			//fatalIfError(err)
 		}
 
 		// determine of we have unprocessed items and abort if we have too many
