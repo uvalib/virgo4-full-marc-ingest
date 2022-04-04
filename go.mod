@@ -3,7 +3,7 @@ module github.com/uvalib/virgo4-full-marc-ingest
 go 1.14
 
 require (
-	github.com/aws/aws-sdk-go v1.42.49
+	github.com/aws/aws-sdk-go v1.43.31
 	github.com/go-ozzo/ozzo-dbx v1.5.0
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/lib/pq v1.10.4
