@@ -3,10 +3,12 @@ package main
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"time"
 
+	"github.com/uvalib/uva-aws-s3-sdk/uva-s3"
 	"github.com/uvalib/virgo4-sqs-sdk/awssqs"
 )
 
@@ -31,8 +33,12 @@ func main() {
 	err := newDBConnection(cfg)
 	fatalIfError(err)
 
-	// load our AWS_SQS helper object
+	// load our AWS sqs helper object
 	aws, err := awssqs.NewAwsSqs(awssqs.AwsSqsConfig{MessageBucketName: cfg.MessageBucketName})
+	fatalIfError(err)
+
+	// load our AWS s3 helper object
+	s3Svc, err := uva_s3.NewUvaS3(uva_s3.UvaS3Config{Logging: true})
 	fatalIfError(err)
 
 	// ensure the queues exist
@@ -82,8 +88,15 @@ func main() {
 				continue
 			}
 
+			// create temp file
+			tmp, e := ioutil.TempFile(cfg.DownloadDir, "")
+			fatalIfError(e)
+			tmp.Close()
+			file.LocalName = tmp.Name()
+
 			// download the file
-			file.LocalName, e = s3download(cfg.DownloadDir, f.SourceBucket, f.SourceKey, f.ObjectSize)
+			o := uva_s3.NewUvaS3Object(f.SourceBucket, f.SourceKey)
+			e = s3Svc.GetToFile(o, file.LocalName)
 			fatalIfError(e)
 
 			// update our lost of files to be processed
