@@ -18,7 +18,7 @@ func newDBConnection(cfg *ServiceConfig) error {
 	// connect to database
 	log.Printf("INFO: creating postgres connection")
 
-	connStr := fmt.Sprintf("user=%s password=%s dbname=%s host=%s port=%d connect_timeout=%d sslmode=disable",
+	connStr := fmt.Sprintf("user=%s password=%s dbname=%s host=%s port=%d connect_timeout=%d",
 		cfg.PostgresUser, cfg.PostgresPass, cfg.PostgresDatabase, cfg.PostgresHost, cfg.PostgresPort, 30)
 
 	var err error
